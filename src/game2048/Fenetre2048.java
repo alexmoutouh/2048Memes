@@ -22,7 +22,7 @@ public class Fenetre2048 extends JFrame {
 			}
 		});
 		setLayout(new BorderLayout());
-		Grille grid = new Grille(4);
+		Grid grid = new Grid(4);
 		add(grid);
 		//JButton enterButton = new JButton( "Enter" );
 		//add(enterButton, BorderLayout.CENTER);
