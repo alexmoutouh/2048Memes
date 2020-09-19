@@ -102,43 +102,81 @@ public class Grid extends JPanel {
 		return nextCell;
 	}
 
-	private void moveAndMergeInto(Cell src, Cell dst) {
-		if (dst.isEmpty()) {
-			dst.setValue(src.getValue());
-			src.setEmpty(true);
-			hasChanged = true;
-		} else if (dst.getValue() == src.getValue()) {
-			dst.setValue(dst.getValue() * 2);
-			src.setEmpty(true);
-			hasChanged = true;
-		}
-	}
-
 	/**
 	 * Fournit la logique de parcours de la grille en fonction du mouvement
-	 * effectue. Le parcours ligne est effectue dans la direction opposee a celle
-	 * des mouvements vers le haut et le bas. Le parcours colonne est effectue dans
-	 * la direction opposee a celle des mouvements vers la gauche et la droite.
+	 * effectue. 
 	 * 
 	 * @param it        L'indice de parcours.
 	 * @param direction La direction dans laquelle le mouvement est effectue.
-	 * @param isLine    Indique si it est un indice de ligne ou pas.
+	 * @param reversed  Indique si l'iteration se fait dans le sens inverse de la
+	 *                  direction ou pas.
 	 * 
 	 * @return True si it a ete modifie et qu'il reste donc des Cell a deplacer.
 	 */
-	private boolean nextIteration(GridIterator it, Directions direction, boolean isLine) {
+	private boolean nextIteration(GridIterator it, Directions direction, boolean reversed) {
 		try {
 			if ((it.isLineIterator() && direction.equals(Directions.DOWN))
 					|| (!it.isLineIterator() && direction.equals(Directions.RIGHT))) {
-				it.prev();
+				if (reversed) {					
+					it.prev();
+				} else {
+					it.next();
+				}
 			} else {
-				it.next();
+				if (reversed) {					
+					it.next();
+				} else {
+					it.prev();
+				}
 			}
 		} catch (IndexOutOfBoundsException e) {
 			return false;
 		}
 
 		return true;
+	}
+
+	private void push(Cell cell, Directions direction) {
+		GridIterator iterMove;
+		switch (direction) {
+		case UP:
+		case DOWN:
+			iterMove = new GridIterator(true, cell.getLi());
+			break;
+		default:
+			iterMove = new GridIterator(false, cell.getCo());
+			break;
+		}
+
+			if (iterMove.isLineIterator) {
+				do {
+					Cell nextCell = getNextCell(cases[iterMove.pos()][cell.getCo()], direction);
+					if (nextCell != null) {
+						moveAndMergeInto(cases[iterMove.pos()][cell.getCo()], nextCell);
+					}
+				} while (nextIteration(iterMove, direction, false));				
+			} else {
+				do {
+					Cell nextCell = getNextCell(cases[cell.getLi()][iterMove.pos()], direction);
+					if (nextCell != null) {
+						moveAndMergeInto(cases[cell.getLi()][iterMove.pos()], nextCell);
+					}
+				} while (nextIteration(iterMove, direction, false));	
+			}
+	}
+
+	private void moveAndMergeInto(Cell src, Cell dst) {
+		if (!src.isEmpty()) {			
+			if (dst.isEmpty()) {
+				dst.setValue(src.getValue());
+				src.setEmpty(true);
+				hasChanged = true;
+			} else if (dst.getValue() == src.getValue()) {
+				dst.setValue(dst.getValue() * 2);
+				src.setEmpty(true);
+				hasChanged = true;
+			}
+		}
 	}
 
 	private void move(Directions direction) {
@@ -153,6 +191,7 @@ public class Grid extends JPanel {
 			break;
 		case DOWN:
 			i = new GridIterator(true, size - 2);
+			break;
 		default:
 			i = new GridIterator(true, 0);
 			break;
@@ -172,11 +211,8 @@ public class Grid extends JPanel {
 			}
 
 			do {
-				Cell nextCell = getNextCell(cases[i.pos()][j.pos()], direction);
-				if (nextCell != null) {
-					moveAndMergeInto(cases[i.pos()][j.pos()], nextCell);
-				}
-			} while (nextIteration(j, direction, false));
+				push(cases[i.pos()][j.pos()], direction);
+			} while (nextIteration(j, direction, true));
 		} while (nextIteration(i, direction, true));
 	}
 
@@ -251,7 +287,7 @@ public class Grid extends JPanel {
 
 		public void next() {
 			++position;
-			if (position <= 0 || size <= position) {
+			if (position < 0 || size <= position) {
 				--position;
 				throw new IndexOutOfBoundsException("Iterator outside of the grid.");
 			}
@@ -259,7 +295,7 @@ public class Grid extends JPanel {
 
 		public void prev() {
 			--position;
-			if (position <= 0 || size <= position) {
+			if (position < 0 || size <= position) {
 				++position;
 				throw new IndexOutOfBoundsException("Iterator outside of the grid.");
 			}
